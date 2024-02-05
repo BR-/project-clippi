@@ -229,7 +229,9 @@ export const generateFileRenameContext = (
   filename?: string
 ): Context => {
   const gameStart = settings ? settings : exampleGameStart;
-  let ctx = generateGameStartContext(gameStart, undefined, undefined, metadata);
+  const me = settings?.players.findIndex((p) => p.connectCode === "ALTA#501");
+  // p.userId might be more stable, but it's not like I'm planning on changing my connect code
+  let ctx = generateGameStartContext(gameStart, undefined, me === -1 ? undefined : me, metadata);
   const gameStartTime = metadata && metadata.startAt ? metadata.startAt : undefined;
   ctx = generateGlobalContext(ctx, moment(gameStartTime));
   ctx = addFilenameContext(ctx, filename);
