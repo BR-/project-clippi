@@ -4,6 +4,7 @@ import { exists } from "common/utils";
 import type { Observable } from "rxjs";
 import { merge } from "rxjs";
 import { filter, map } from "rxjs/operators";
+import { getCharacterShortName, getStageShortName } from "@vinceau/slp-realtime";
 
 import { playerFilterMatches } from "./operators/player";
 import type { EventEmit, EventManagerConfig, GameEndEventFilter, GameStartEventFilter } from "./types";
@@ -34,11 +35,20 @@ const readGameStartEvents = (
       }
       return base$.pipe(
         map(
-          (context): EventEmit => ({
-            id: event.id,
-            type: event.type,
-            payload: context,
-          })
+          (context): EventEmit => {
+            let x: any = {
+              id: event.id,
+              type: event.type,
+              payload: { ...context },
+            };
+            if (x.payload.stageId) {
+              x.payload.stageName = getStageShortName(x.payload.stageId);
+            }
+            for (let y of x.payload.players) {
+              y.characterName = getCharacterShortName(y.characterId);
+            }
+            return x;
+          }
         )
       );
     });
