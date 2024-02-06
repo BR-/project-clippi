@@ -278,7 +278,7 @@ export class FileProcessor {
           }
         }
         const framesList = Array.from(framesInOrder());
-        return this._findButtonInputs(filename, framesList, config as Partial<ButtonInputOptions>);
+        return this._findButtonInputs(game, filename, framesList, config as Partial<ButtonInputOptions>);
     }
   }
 
@@ -286,6 +286,7 @@ export class FileProcessor {
    * Finds combos and adds them to the dolphin queue. Returns the number of combos found.
    */
   private _findButtonInputs(
+    game: SlippiGame,
     filename: string,
     frames: FrameEntryType[],
     options: Partial<ButtonInputOptions>
@@ -293,9 +294,15 @@ export class FileProcessor {
     const inputOptions = Object.assign({}, defaultButtonInputOptions, options);
     const frames$ = from(frames);
     // const inputs$ = this.realtime.input.buttonCombo(inputOptions.buttonCombo, inputOptions.holdDurationFrames);
-    const inputs$ = forAllPlayerIndices((i) =>
-      frames$.pipe(mapFramesToButtonInputs(i, inputOptions.buttonCombo, inputOptions.holdDurationFrames))
-    );
+    const me = game.getSettings()?.players.findIndex((p) => p.connectCode === "ALTA#501");
+    let inputs$;
+    if (me === undefined || me === -1) {
+      inputs$ = forAllPlayerIndices((i) =>
+        frames$.pipe(mapFramesToButtonInputs(i, inputOptions.buttonCombo, inputOptions.holdDurationFrames))
+      );
+    } else {
+      inputs$ = frames$.pipe(mapFramesToButtonInputs(me, inputOptions.buttonCombo, inputOptions.holdDurationFrames));
+    }
     const lockoutFrames = millisToFrames(inputOptions.captureLockoutMs);
     return inputs$.pipe(
       throttleInputButtons(lockoutFrames),
