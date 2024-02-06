@@ -1,15 +1,21 @@
-import type { InputButtonCombo, RealTimeInputEvents } from "@vinceau/slp-realtime";
+import { getCharacterShortName, getStageShortName } from "@vinceau/slp-realtime";
+import type { GameStartType } from "@slippi/slippi-js";
+import type { InputButtonCombo, RealTimeInputEvents, RealTimeGameEvents } from "@vinceau/slp-realtime";
 import { exists } from "common/utils";
 import type { Observable } from "rxjs";
 import { merge } from "rxjs";
-import { map } from "rxjs/operators";
+import { map, filter } from "rxjs/operators";
 
 import { playerFilter } from "./operators/player";
 import type { EventConfig, EventEmit, EventManagerConfig, InputEventFilter } from "./types";
 import { InputEvent } from "./types";
 
-export const readInputsConfig = (inputs: RealTimeInputEvents, config: EventManagerConfig): Observable<EventEmit> => {
-  return readButtonComboEvents(config, inputs);
+export const readInputsConfig = (
+  inputs: RealTimeInputEvents,
+  config: EventManagerConfig,
+  game: RealTimeGameEvents
+): Observable<EventEmit> => {
+  return readButtonComboEvents(config, inputs, game.start$);
 };
 
 interface InputEventConfig extends EventManagerConfig {
@@ -21,7 +27,11 @@ interface InputEventConfig extends EventManagerConfig {
   >;
 }
 
-const readButtonComboEvents = (eventConfig: EventManagerConfig, inputs: RealTimeInputEvents): Observable<EventEmit> => {
+const readButtonComboEvents = (
+  eventConfig: EventManagerConfig,
+  inputs: RealTimeInputEvents,
+  game$: Observable<GameStartType>
+): Observable<EventEmit> => {
   // Handle game start events
   const observables: Observable<EventEmit>[] = (eventConfig as InputEventConfig).events
     .filter(filterValidButtonCombo) // We must have a valid filter
@@ -49,15 +59,33 @@ const readButtonComboEvents = (eventConfig: EventManagerConfig, inputs: RealTime
         }
       }
 
-      return base$.pipe(
-        map(
-          (context): EventEmit => ({
-            id: event.id,
-            type: event.type,
-            payload: context,
+      let currentGameStart: any = null;
+      return merge(base$.pipe(map((x) => ({ src: "base", x: x }))), game$.pipe(map((x) => ({ src: "game", x: x }))))
+        .pipe(
+          filter((x) => {
+            if (x.src == "game") {
+              currentGameStart = { ...x.x };
+              if (currentGameStart.stageId) {
+                currentGameStart.stageName = getStageShortName(currentGameStart.stageId);
+              }
+              for (let y of currentGameStart.players) {
+                y.characterName = getCharacterShortName(y.characterId);
+              }
+              return false;
+            } else {
+              return true;
+            }
           })
         )
-      );
+        .pipe(
+          map(
+            (context): EventEmit => ({
+              id: event.id,
+              type: event.type,
+              payload: { gameDetails: currentGameStart, ...context.x },
+            })
+          )
+        );
     });
   return merge(...observables);
 };

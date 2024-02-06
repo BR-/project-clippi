@@ -28,7 +28,7 @@ export class EventManager {
       switchMap((config) => {
         return merge(
           readGameConfig(this.realtime.game, config),
-          readInputsConfig(this.realtime.input, config),
+          readInputsConfig(this.realtime.input, config, this.realtime.game),
           readStocksConfig(this.realtime.stock, config),
           readComboConfig(this.realtime.combo, config)
         );
