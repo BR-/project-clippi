@@ -84,7 +84,7 @@ export const InfoView: React.FC = () => {
   return (
     <Container>
       <Logo flip={showDevOptions} src={clippiLogo} onClick={handleLogoClick} />
-      <h1>Project Clippi v{__VERSION__}</h1>
+      <h1>Project Clippi v{__VERSION__} + Altafen Mods</h1>
       <Content>
         <p>
           Commit {__BUILD__}
